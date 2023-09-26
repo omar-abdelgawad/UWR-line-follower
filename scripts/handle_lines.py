@@ -151,7 +151,3 @@ def hough_lines_intersection(lines: np.ndarray, image_shape: tuple):
             if point_on_image(x, y, image_shape):
                 intersect_pts.append([x, y])
     return np.array(intersect_pts, dtype=int)
-
-
-if __name__ == "__main__":
-    pass

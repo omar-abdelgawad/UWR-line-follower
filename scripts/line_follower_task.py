@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
-from handle_lines import hough_lines_end_points
 from color_correct import correct
+from typing import Optional
 
 """This is a module NOT a script. DON'T RUN THIS MODULE OR USE IT'S MAIN FUNCTION.
 The function to use in this module is called [get_thickness_and_direction].
@@ -9,11 +9,11 @@ The function to use in this module is called [get_thickness_and_direction].
 
 GREEN = (0, 255, 0)
 BLUE = (255, 0, 0)
+RADIUS = 3
 LINE_THICKNESS = 4
 FONT = cv2.FONT_HERSHEY_COMPLEX
 FONT_SCALE = 1
 # tunable parameters
-MARGIN = 120
 BLUR_KERNEL = (15, 15)
 LOWER_BOUND_RED_1 = np.array([0, 75, 20])
 UPPER_BOUND_RED_1 = np.array([10, 255, 255])
@@ -118,7 +118,7 @@ def get_center_moment(mask: np.ndarray) -> tuple[int, int]:
 
 def get_thickness_and_direction(
     img: np.ndarray,
-) -> tuple[int, tuple[int, int], dict[str, bool]] | None:
+) -> tuple[int, tuple[int, int], tuple[int, int], tuple[int, int]]:
     """applies preprocessing, red line detection, and finds thickness for line if exists.
     Returns None if no lines exist.
 
@@ -131,67 +131,44 @@ def get_thickness_and_direction(
         ret_dict(dict[str,bool]): Contains boolean values of whether points determined by
         MARGIN are on the red line or not.
     """
-    global MARGIN
     img = apply_filter(img)
     mask = get_red_mask(img)
     cx, cy = get_center_moment(mask)
-    lines = get_lines(mask)
-    if lines is None:
-        return None
+    cx_up, cy_up = get_center_moment(mask[: mask.shape[0] // 2])
+    cx_down, cy_down = get_center_moment(mask[mask.shape[0] // 2 :])
 
-    end_points = hough_lines_end_points(lines, img.shape)
-    new_point1, new_point2 = combine_lines_into_one(end_points)
-    slope = find_slope(new_point1, new_point2)
-    angle_in_rad = (np.pi / 2) - np.arctan(slope)
-    number_of_pix = np.count_nonzero(mask[len(mask) // 2])
-    thickness = int(np.abs(number_of_pix * np.cos(angle_in_rad)))
-    angle_in_deg = np.degrees(angle_in_rad)
-
-    dir_dict = {
-        "center": (0, 0),
-        "up": (-1, 0),
-        "down": (1, 0),
-        "left": (0, -1),
-        "right": (0, 1),
-    }
-    ret_dict = {}
-    cen_row, cen_col = img.shape[0] // 2, img.shape[1] // 2
-    while MARGIN >= cen_row or MARGIN >= cen_col:
-        MARGIN = MARGIN // 2
-    for [direction, (c1, c2)] in dir_dict.items():
-        ret_dict[direction] = bool(mask[cen_row + c1 * MARGIN][cen_col + c2 * MARGIN])
-
-    # Debugging
-    print(number_of_pix, angle_in_deg, thickness)
-    for [direction, (c1, c2)] in dir_dict.items():
-        color = BLUE if ret_dict[direction] else GREEN
-        cv2.circle(img, (cen_col + c2 * MARGIN, cen_row + c1 * MARGIN), 5, color, 10)
-
-    cv2.arrowedLine(
-        img, (img.shape[1] // 2, img.shape[0]), (cx, cy), GREEN, LINE_THICKNESS
-    )
-    cv2.line(img, new_point1, new_point2, GREEN, LINE_THICKNESS)
-    cv2.line(img, (50, 0), (50, thickness), GREEN, LINE_THICKNESS)
-    cv2.putText(
-        img,
-        f"thickness = {thickness}",
-        (50, 20),
-        FONT,
-        FONT_SCALE,
-        GREEN,
-        5,
-    )
-    cv2.imshow("image after", img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-    return thickness, (cx, cy), ret_dict
+    number_of_pix = np.count_nonzero(mask[int(len(mask) * 0.75)])
+    thickness = int(np.abs(number_of_pix))
+    return thickness, (cx_up, cy_up), (cx, cy), (cx_down, cy_down + mask.shape[0] // 2)
 
 
-def main(args: (list[str] | None)) -> None:
+def main(args: (Optional[list[str]])) -> None:
     # Just testing and debugging. DON'T RUN THIS MODULE
-    img = cv2.imread("test_images/red4.webp")
-    print("ret value of function: ", get_thickness_and_direction(img))
+    import os
+
+    root = "test_images"
+    for filename in os.listdir(root):
+        print(filename)
+        path = os.path.join(root, filename)
+        img = cv2.imread(path)
+        thickness, (nextpt), (middle_pt), (prev_pt) = get_thickness_and_direction(img)
+
+        cv2.circle(img, prev_pt, RADIUS, GREEN, 5)
+        cv2.circle(img, middle_pt, RADIUS, GREEN, 5)
+        cv2.circle(img, nextpt, RADIUS, GREEN, 5)
+        cv2.arrowedLine(img, middle_pt, nextpt, BLUE, 5)
+        cv2.putText(
+            img,
+            f"thick = {thickness}",
+            (50, 20),
+            FONT,
+            FONT_SCALE,
+            GREEN,
+            5,
+        )
+        cv2.imshow("image after", img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
