@@ -100,6 +100,9 @@ def get_thickness_and_direction(
         middle_point(tuple[int,int]): the x,y coordinate of the line in the whole frame.
         prev_point(tuple[int,int]): the x,y coordinate of the line in the lower half of the frame .
     """
+    # TODO: calculate thickness in a smarter way if the line is not present in the whole image.
+    # TODO: agree on a specefic output format if there are no detected lines in the image.(maybe use get_lines func)
+
     img = apply_filter(img)
     mask = get_red_mask(img)
     cx, cy = get_center_moment(mask)
@@ -115,7 +118,7 @@ def main(args: (Optional[list[str]])) -> None:
     # Just testing and debugging. DON'T RUN THIS MODULE
     import os
 
-    root = "test_images"
+    root = "test_images_2"
     if not os.path.exists("out"):
         os.makedirs("out")
     for filename in os.listdir(root):
