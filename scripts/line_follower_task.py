@@ -1,5 +1,5 @@
-"""This is a module NOT a script. DON'T RUN THIS MODULE OR USE IT'S MAIN FUNCTION.
-The function to use in this module is called [get_thickness_and_direction].
+"""This is a library NOT a script. DON'T RUN THIS FILE OR USE IT'S MAIN FUNCTION.
+The function to use in this module is called 'get_thickness_and_direction'.
 """
 import numpy as np
 import cv2
@@ -44,7 +44,6 @@ def apply_filter(img: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: processed image.
     """
-    # TODO: add color correction
     img = correct_color_underwater(img)
     img = cv2.GaussianBlur(img, BLUR_KERNEL, cv2.BORDER_DEFAULT)
     return img
@@ -97,9 +96,9 @@ def get_thickness_and_direction(
 
     Returns:
         thickness(int): Thickness of the red line in pixels.
-        center_of_line(tuple[int,int]): the x,y coordinate of the center of line.
-        ret_dict(dict[str,bool]): Contains boolean values of whether points determined by
-        MARGIN are on the red line or not.
+        next_point(tuple[int,int]): the x,y coordinate of the line in the upper half of frame.
+        middle_point(tuple[int,int]): the x,y coordinate of the line in the whole frame.
+        prev_point(tuple[int,int]): the x,y coordinate of the line in the lower half of the frame .
     """
     img = apply_filter(img)
     mask = get_red_mask(img)
