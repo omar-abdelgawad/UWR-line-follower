@@ -1,11 +1,11 @@
+"""This is a module NOT a script. DON'T RUN THIS MODULE OR USE IT'S MAIN FUNCTION.
+The function to use in this module is called [get_thickness_and_direction].
+"""
 import numpy as np
 import cv2
 from color_correct import correct
 from typing import Optional
 
-"""This is a module NOT a script. DON'T RUN THIS MODULE OR USE IT'S MAIN FUNCTION.
-The function to use in this module is called [get_thickness_and_direction].
-"""
 
 GREEN = (0, 255, 0)
 BLUE = (255, 0, 0)
@@ -34,11 +34,6 @@ def correct_color_underwater(img: np.ndarray) -> np.ndarray:
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     corrected_img = correct(img_rgb)
     return corrected_img
-
-
-def find_slope(pt1: tuple[int, int], pt2: tuple[int, int]) -> float:
-    """Calculates Slope between two points"""
-    return (pt1[1] - pt2[1]) / (pt1[0] - pt2[0])
 
 
 def apply_filter(img: np.ndarray) -> np.ndarray:
@@ -72,30 +67,6 @@ def get_lines(mask: np.ndarray) -> np.ndarray:
     )
     lines = cv2.HoughLines(canny_image, 1, np.pi / 180, LINE_THRESHOLD, None, 0, 0)
     return lines
-
-
-def combine_lines_into_one(
-    end_pts: list[list[tuple[int, int]]]
-) -> tuple[tuple[int, int], tuple[int, int]]:
-    """Combines all given lines into one line using average method.
-
-    Args:
-        end_pts(list[list[tuple[int,int]]]): list of lines.
-
-    Retruns:
-        tuple[tuple[int,int],tuple[int,int]]: two points that represent the combined line.
-    """
-    x1, y1 = 0, 0
-    x2, y2 = 0, 0
-    for lst_two_points in end_pts:
-        point1, point2 = lst_two_points
-        x1 += point1[0]
-        y1 += point1[1]
-        x2 += point2[0]
-        y2 += point2[1]
-    new_point1 = (x1 // len(end_pts)), (y1 // len(end_pts))
-    new_point2 = (x2 // len(end_pts)), (y2 // len(end_pts))
-    return new_point1, new_point2
 
 
 def get_center_moment(mask: np.ndarray) -> tuple[int, int]:
