@@ -6,7 +6,6 @@ import cv2
 from color_correct import correct
 from typing import Optional
 
-
 GREEN = (0, 255, 0)
 BLUE = (255, 0, 0)
 RADIUS = 3
@@ -118,6 +117,8 @@ def main(args: (Optional[list[str]])) -> None:
     import os
 
     root = "test_images"
+    if not os.path.exists("out"):
+        os.makedirs("out")
     for filename in os.listdir(root):
         print(filename)
         path = os.path.join(root, filename)
@@ -138,7 +139,11 @@ def main(args: (Optional[list[str]])) -> None:
             5,
         )
         cv2.imshow("image after", img)
-        cv2.waitKey(0)
+
+        if cv2.waitKey(0) & 0xFF == ord("s"):
+            save_path = os.path.join("out", filename)
+            print(save_path)
+            cv2.imwrite(save_path, img)
         cv2.destroyAllWindows()
 
 
