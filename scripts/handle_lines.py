@@ -1,3 +1,6 @@
+"""
+This module contains helper functions to handle geometry related to lines and the Houghlines function in cv2.
+"""
 import numpy as np
 
 
