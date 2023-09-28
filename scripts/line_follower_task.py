@@ -106,15 +106,31 @@ def get_thickness_and_direction(
     img = apply_filter(img)
     mask = get_red_mask(img)
     cx, cy = get_center_moment(mask)
-    cx_up, cy_up = get_center_moment(mask[: mask.shape[0] // 2])
-    cx_down, cy_down = get_center_moment(mask[mask.shape[0] // 2 :])
+    cx_right, cy_right = get_center_moment(mask[:, mask.shape[1] // 2 :])
+    cx_down, cy_down = get_center_moment(mask[:, : mask.shape[1] // 2])
+    # calculate thickness of horizontal and vertical lines in mask by two scans.
+    all_horizontal_thicknesses = np.count_nonzero(mask, axis=1)
+    all_vertical_thicknesses = np.count_nonzero(mask, axis=0)
+    # remove the zero values from both arrays
+    all_horizontal_thicknesses = all_horizontal_thicknesses[
+        all_horizontal_thicknesses != 0
+    ]
+    all_vertical_thicknesses = all_vertical_thicknesses[all_vertical_thicknesses != 0]
+    # get the median of combined arrays
+    thickness = int(
+        np.median(
+            np.concatenate((all_horizontal_thicknesses, all_vertical_thicknesses))
+        )
+    )
+    return (
+        thickness,
+        (cx_right + mask.shape[1] // 2, cy_right),
+        (cx, cy),
+        (cx_down, cy_down + mask.shape[0] // 2),
+    )
 
-    number_of_pix = np.count_nonzero(mask[int(len(mask) * 0.75)])
-    thickness = int(np.abs(number_of_pix))
-    return thickness, (cx_up, cy_up), (cx, cy), (cx_down, cy_down + mask.shape[0] // 2)
 
-
-def main(args: (Optional[list[str]])) -> None:
+def main(args: (Optional[list[str]])) -> int:
     # Just testing and debugging. DON'T RUN THIS MODULE
     import os
 
@@ -130,7 +146,9 @@ def main(args: (Optional[list[str]])) -> None:
         cv2.circle(img, prev_pt, RADIUS, GREEN, 5)
         cv2.circle(img, middle_pt, RADIUS, GREEN, 5)
         cv2.circle(img, nextpt, RADIUS, GREEN, 5)
-        cv2.arrowedLine(img, middle_pt, nextpt, BLUE, 5)
+        # draw line with length = thickness to view the thickness visually
+        cv2.line(img, (200, 200), (200 + thickness, 200), GREEN, LINE_THICKNESS)
+        cv2.arrowedLine(img, middle_pt, nextpt, BLUE, LINE_THICKNESS)
         cv2.putText(
             img,
             f"thick = {thickness}",
@@ -140,13 +158,16 @@ def main(args: (Optional[list[str]])) -> None:
             GREEN,
             5,
         )
-        cv2.imshow("image after", img)
-
-        if cv2.waitKey(0) & 0xFF == ord("s"):
+        cv2.imshow("orig", img)
+        # cv2.imshow("after_correction", apply_filter(img))
+        if (key := (cv2.waitKey(0) & 0xFF)) == ord("s"):
             save_path = os.path.join("out", filename)
             print(save_path)
             cv2.imwrite(save_path, img)
+        elif key == ord("d"):
+            break
         cv2.destroyAllWindows()
+    return 0
 
 
 if __name__ == "__main__":
