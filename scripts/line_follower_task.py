@@ -99,7 +99,13 @@ def get_center_moment(mask: np.ndarray) -> tuple[int, int]:
 
 
 def get_direction(mask: np.ndarray) -> Direction:
-    """Takes as input binary image and returns the direction of the line."""
+    """Takes as input binary image and returns the direction of the line.
+
+    Args:
+        mask(np.ndarray): Input binary image.
+
+    Returns:
+        (Direction): Direction of the line."""
     global CUR_DIR
     global STOP
     if STOP:
@@ -161,17 +167,24 @@ def get_thickness_and_direction(
 
     img = apply_filter(img)
     mask = get_red_mask(img)
+    direction = get_direction(mask)
     # kernel = np.ones((5, 5), np.uint8)
     # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
     ##### debug
-    direction = get_direction(mask)
     cv2.putText(mask, f"direction = {direction}", (50, 50), FONT, FONT_SCALE, GREEN, 5)
     cv2.imshow("mask", mask)
     cv2.waitKey(0)
     ####
-    cx, cy = get_center_moment(mask)
-    cx_right, cy_right = get_center_moment(mask[:, mask.shape[1] // 2 :])
-    cx_down, cy_down = get_center_moment(mask[:, : mask.shape[1] // 2])
+    if direction == Direction.STOP:
+        next_point = img.shape[1] // 2, img.shape[0] // 2
+    elif direction == Direction.UP:
+        next_point = img.shape[1] // 2, img.shape[0] // 4
+    elif direction == Direction.DOWN:
+        next_point = img.shape[1] // 2, img.shape[0] * 3 // 4
+    else:
+        next_point = img.shape[1] * 3 // 4, img.shape[0] // 2
+
+    middle_point = img.shape[1] // 2, img.shape[0] // 2
     # calculate thickness of horizontal and vertical lines in mask by two scans.
     all_horizontal_thicknesses = np.count_nonzero(mask, axis=1)
     all_vertical_thicknesses = np.count_nonzero(mask, axis=0)
@@ -188,9 +201,9 @@ def get_thickness_and_direction(
     )
     return (
         thickness,
-        (cx_right + mask.shape[1] // 2, cy_right),
-        (cx, cy),
-        (cx_down, cy_down + mask.shape[0] // 2),
+        next_point,
+        middle_point,
+        (0, 0),
     )
 
 
@@ -212,7 +225,7 @@ def main(args: (Optional[list[str]])) -> int:
         cv2.circle(img, nextpt, RADIUS, GREEN, 5)
         # draw line with length = thickness to view the thickness visually
         cv2.line(img, (200, 200), (200 + thickness, 200), GREEN, LINE_THICKNESS)
-        cv2.arrowedLine(img, middle_pt, nextpt, BLUE, LINE_THICKNESS)
+        cv2.arrowedLine(img, middle_pt, nextpt, BLUE, 10)
         cv2.putText(
             img,
             f"thick = {thickness}",
