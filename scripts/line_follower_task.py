@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from color_correct import correct
 from typing import Optional
+from enum import Enum
 
 GREEN = (0, 255, 0)
 BLUE = (255, 0, 0)
@@ -19,6 +20,18 @@ UPPER_BOUND_RED_1 = np.array([10, 255, 255])
 LOWER_BOUND_RED_2 = np.array([160, 75, 20])
 UPPER_BOUND_RED_2 = np.array([180, 255, 255])
 LINE_THRESHOLD = 90
+
+
+class Direction(Enum):
+    STOP = 0
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
+    DOWN = 4
+
+
+CUR_DIR = Direction.STOP
+STOP = False
 
 
 def correct_color_underwater(img: np.ndarray) -> np.ndarray:
@@ -85,6 +98,50 @@ def get_center_moment(mask: np.ndarray) -> tuple[int, int]:
     return cX, cY
 
 
+def get_direction(mask: np.ndarray) -> Direction:
+    """Takes as input binary image and returns the direction of the line."""
+    global CUR_DIR
+    global STOP
+    if STOP:
+        print("task is done")
+        return Direction.STOP
+    line_up = np.any(mask[0, :])
+    line_down = np.any(mask[-1, :])
+    line_left = np.any(mask[:, 0])
+    line_right = np.any(mask[:, -1])
+    no_of_edges = sum(map(int, [line_up, line_down, line_left, line_right]))
+    # if more than 2 edges are detected consider it as an error and keep current state.
+    if no_of_edges > 2:
+        return CUR_DIR
+    # if only one edge is detected then it is either the start or the end of the track.
+    if no_of_edges == 1:
+        if line_up and CUR_DIR == Direction.DOWN:
+            STOP = True
+            CUR_DIR = Direction.STOP
+            return CUR_DIR
+        if line_up:
+            CUR_DIR = Direction.UP
+            return CUR_DIR
+    # always prioritize right over all other directions.
+    if line_right:
+        CUR_DIR = Direction.RIGHT
+        return CUR_DIR
+
+    if line_left:
+        if line_up:
+            CUR_DIR = Direction.UP
+            return CUR_DIR
+        if line_down:
+            CUR_DIR = Direction.DOWN
+            return CUR_DIR
+    # if no right or left edges are detected then it is a straight line.
+    if line_up and line_down:
+        return CUR_DIR
+
+    print("this current state is not handled, returning STOP, please check the code.")
+    return Direction.STOP
+
+
 def get_thickness_and_direction(
     img: np.ndarray,
 ) -> tuple[int, tuple[int, int], tuple[int, int], tuple[int, int]]:
@@ -100,11 +157,18 @@ def get_thickness_and_direction(
         middle_point(tuple[int,int]): the x,y coordinate of the line in the whole frame.
         prev_point(tuple[int,int]): the x,y coordinate of the line in the lower half of the frame .
     """
-    # TODO: calculate thickness in a smarter way if the line is not present in the whole image.
-    # TODO: agree on a specefic output format if there are no detected lines in the image.(maybe use get_lines func)
+    # TODO: agree on a specefic output format if there are no detected lines in the image for thickness and direction.(maybe use get_lines func)
 
     img = apply_filter(img)
     mask = get_red_mask(img)
+    # kernel = np.ones((5, 5), np.uint8)
+    # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
+    ##### debug
+    direction = get_direction(mask)
+    cv2.putText(mask, f"direction = {direction}", (50, 50), FONT, FONT_SCALE, GREEN, 5)
+    cv2.imshow("mask", mask)
+    cv2.waitKey(0)
+    ####
     cx, cy = get_center_moment(mask)
     cx_right, cy_right = get_center_moment(mask[:, mask.shape[1] // 2 :])
     cx_down, cy_down = get_center_moment(mask[:, : mask.shape[1] // 2])
