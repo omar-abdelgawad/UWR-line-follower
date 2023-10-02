@@ -178,11 +178,13 @@ def get_thickness_and_direction(
     if direction == Direction.STOP:
         next_point = img.shape[1] // 2, img.shape[0] // 2
     elif direction == Direction.UP:
-        next_point = img.shape[1] // 2, img.shape[0] // 4
+        next_point = get_center_moment(mask[: mask.shape[0] // 2])
     elif direction == Direction.DOWN:
-        next_point = img.shape[1] // 2, img.shape[0] * 3 // 4
+        next_point = get_center_moment(mask[mask.shape[0] // 2 :])
+        next_point = next_point[0], next_point[1] + mask.shape[0] // 2
     else:
-        next_point = img.shape[1] * 3 // 4, img.shape[0] // 2
+        next_point = get_center_moment(mask[:, mask.shape[1] // 2 :])
+        next_point = next_point[0] + mask.shape[1] // 2, next_point[1]
 
     middle_point = img.shape[1] // 2, img.shape[0] // 2
     # calculate thickness of horizontal and vertical lines in mask by two scans.
