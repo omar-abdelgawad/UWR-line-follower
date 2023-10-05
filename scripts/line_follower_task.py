@@ -117,11 +117,16 @@ def get_direction(mask: np.ndarray) -> Direction:
     line_right = np.any(mask[:, -1])
     no_of_edges = sum(map(int, [line_up, line_down, line_left, line_right]))
     # if more than 2 edges are detected consider it as an error and keep current state.
+    if no_of_edges == 0:
+        print("found no edges, returning STOP")
+        return CUR_DIR
     if no_of_edges > 2:
         return CUR_DIR
     # if only one edge is detected then it is either the start or the end of the track.
     if no_of_edges == 1:
-        if line_up and CUR_DIR == Direction.DOWN:
+        if (line_up and CUR_DIR == Direction.DOWN) or (
+            line_down and CUR_DIR == Direction.UP
+        ):
             STOP = True
             CUR_DIR = Direction.STOP
             return CUR_DIR
@@ -168,13 +173,7 @@ def get_thickness_and_direction(
     img = apply_filter(img)
     mask = get_red_mask(img)
     direction = get_direction(mask)
-    # kernel = np.ones((5, 5), np.uint8)
-    # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)
-    ##### debug
-    cv2.putText(mask, f"direction = {direction}", (50, 50), FONT, FONT_SCALE, GREEN, 5)
-    cv2.imshow("mask", mask)
-    cv2.waitKey(0)
-    ####
+
     if direction == Direction.STOP:
         next_point = img.shape[1] // 2, img.shape[0] // 2
     elif direction == Direction.UP:
