@@ -109,47 +109,68 @@ def get_direction(mask: np.ndarray) -> Direction:
     global CUR_DIR
     global STOP
     if STOP:
-        print("task is done")
+        print("task is done. Stopping!.")
         return Direction.STOP
-    line_up = np.any(mask[0, :])
-    line_down = np.any(mask[-1, :])
-    line_left = np.any(mask[:, 0])
-    line_right = np.any(mask[:, -1])
-    no_of_edges = sum(map(int, [line_up, line_down, line_left, line_right]))
+    touch_up = np.count_nonzero(mask[0, :]) >= 5
+    touch_down = np.count_nonzero(mask[-1, :]) >= 5
+    touch_left = np.count_nonzero(mask[:, 0]) >= 5
+    touch_right = np.count_nonzero(mask[:, -1]) >= 5
+    no_of_edges = sum(map(int, [touch_up, touch_down, touch_left, touch_right]))
     # if more than 2 edges are detected consider it as an error and keep current state.
     if no_of_edges == 0:
         print("found no edges, returning STOP")
-        return CUR_DIR
+        return Direction.STOP
     if no_of_edges > 2:
-        return CUR_DIR
+        return Direction.STOP
     # if only one edge is detected then it is either the start or the end of the track.
     if no_of_edges == 1:
-        if (line_up and CUR_DIR == Direction.DOWN) or (
-            line_down and CUR_DIR == Direction.UP
+        if (touch_up and CUR_DIR == Direction.DOWN) or (
+            touch_down and CUR_DIR == Direction.UP
         ):
             STOP = True
             CUR_DIR = Direction.STOP
             return CUR_DIR
-        if line_up:
+        if touch_up:
             CUR_DIR = Direction.UP
             return CUR_DIR
-    # always prioritize right over all other directions.
-    if line_right:
-        CUR_DIR = Direction.RIGHT
-        return CUR_DIR
-
-    if line_left:
-        if line_up:
-            CUR_DIR = Direction.UP
-            return CUR_DIR
-        if line_down:
+        if touch_down:
             CUR_DIR = Direction.DOWN
             return CUR_DIR
-    # if no right or left edges are detected then it is a straight line.
-    if line_up and line_down:
+    # the rest has two edges detected.
+    if touch_right and touch_left:
         return CUR_DIR
 
-    print("this current state is not handled, returning STOP, please check the code.")
+    if touch_up and touch_down:
+        return CUR_DIR
+
+    if touch_right:
+        if CUR_DIR != Direction.LEFT:
+            CUR_DIR = Direction.RIGHT
+            return CUR_DIR
+        elif touch_down:
+            CUR_DIR = Direction.DOWN
+            return CUR_DIR
+        elif touch_up:
+            CUR_DIR = Direction.UP
+            return CUR_DIR
+
+    if touch_left:
+        if touch_up:
+            if CUR_DIR == Direction.RIGHT or CUR_DIR == Direction.UP:
+                CUR_DIR = Direction.UP
+                return CUR_DIR
+            elif CUR_DIR == Direction.DOWN or CUR_DIR == Direction.LEFT:
+                CUR_DIR = Direction.RIGHT
+                return CUR_DIR
+        if touch_down:
+            if CUR_DIR == Direction.RIGHT or CUR_DIR == Direction.DOWN:
+                CUR_DIR = Direction.DOWN
+                return CUR_DIR
+            elif CUR_DIR == Direction.UP or CUR_DIR == Direction.LEFT:
+                CUR_DIR = Direction.RIGHT
+                return CUR_DIR
+
+    print("this current state is not handled, returning STOP.")
     return Direction.STOP
 
 
